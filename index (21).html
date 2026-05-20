@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMR Key Monitoring</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --maroon:#7B1C1C;--maroon-dark:#5A1313;--maroon-pale:#F8EFEF;
+  --gold:#D4A017;
+  --g50:#F9F9F9;--g100:#F0EEEE;--g200:#DDD9D9;--g400:#9A9090;--g600:#5C5454;--g800:#2E2929;
+  --green:#1A7A4A;--green-bg:#EAF5EE;
+  --red:#C0332B;--red-bg:#FDECEA;
+  --orange:#C06010;--orange-bg:#FEF3E8;
+  --blue:#1A5A9A;--blue-bg:#EAF0FA;
+  --purple:#6B21A8;--purple-bg:#F3E8FF;
+  --r:8px;--rl:12px;
+  --sh:0 2px 8px rgba(123,28,28,0.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Barlow',sans-serif;background:var(--g50);color:var(--g800);min-height:100vh;}
+
+/* LOADING */
+#LS{position:fixed;inset:0;background:var(--maroon);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity 0.4s;}
+#LS.hide{opacity:0;pointer-events:none;}
+.ll{background:var(--gold);color:var(--maroon-dark);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:32px;padding:8px 18px;border-radius:8px;margin-bottom:16px;}
+.lt{color:white;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:1px;opacity:.85;}
+.lsp{width:28px;height:28px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-top:16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* PRINT */
+#PS{display:none;}
+@media print{body>*:not(#PS){display:none!important;}#PS{display:block!important;}}
+
+/* HEADER */
+header{background:var(--maroon);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.hlogo{background:var(--gold);color:var(--maroon-dark);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;padding:4px 10px;border-radius:4px;}
+header h1{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px;}
+header h1 span{font-weight:400;opacity:.75;font-size:14px;margin-left:8px;}
+.hright{display:flex;align-items:center;gap:10px;}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.85;background:rgba(255,255,255,.12);padding:4px 10px;border-radius:20px;}
+.sdot{width:8px;height:8px;border-radius:50%;background:#4CAF50;animation:blink 2s infinite;}
+.sdot.sy{background:var(--gold);}
+.sdot.er{background:#EF5350;animation:none;}
+.rpill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase;}
+.rpill.adm{background:var(--gold);color:var(--maroon-dark);}
+.rpill.vwr{background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);}
+.hbtn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:var(--r);padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .15s;}
+.hbtn:hover{background:rgba(255,255,255,.28);}
+
+/* ALERT */
+#AB{background:#FFF3CD;border-bottom:2px solid var(--orange);padding:8px 24px;font-size:13px;font-weight:500;color:var(--orange);align-items:center;gap:8px;display:none;}
+#AB.on{display:flex;}
+
+/* NAV */
+.nav{background:var(--maroon-dark);display:flex;padding:0 24px;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.ntab{padding:10px 20px;font-size:13px;font-weight:600;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;color:rgba(255,255,255,.6);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;text-transform:uppercase;user-select:none;white-space:nowrap;}
+.ntab:hover{color:rgba(255,255,255,.9);}
+.ntab.on{color:#fff;border-bottom-color:var(--gold);}
+
+/* MAIN */
+main{padding:24px;max-width:1280px;margin:0 auto;}
+.pg{display:none;}.pg.on{display:block;}
+
+/* STATS */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
+.sc{background:#fff;border-radius:var(--rl);padding:14px 18px;border:1px solid var(--g200);box-shadow:var(--sh);}
+.sc .lb{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--g400);margin-bottom:6px;}
+.sc .vl{font-size:26px;font-family:'Barlow Condensed',sans-serif;font-weight:700;line-height:1;}
+.sc.cm .vl{color:var(--maroon);border-top:3px solid var(--maroon);}
+.sc.cg .vl{color:var(--green);border-top:3px solid var(--green);}
+.sc.cr .vl{color:var(--red);border-top:3px solid var(--red);}
+.sc.co .vl{color:var(--orange);border-top:3px solid var(--orange);}
+.sc.cp .vl{color:var(--purple);border-top:3px solid var(--purple);}
+.sc.cb .vl{color:var(--blue);border-top:3px solid var(--blue);}
+
+/* KEY CARDS */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px;}
+.kc{background:#fff;border-radius:var(--rl);border:1px solid var(--g200);overflow:hidden;box-shadow:var(--sh);transition:transform .15s,box-shadow .15s;}
+.kc:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(123,28,28,.12);}
+.kch{background:var(--maroon-pale);padding:12px 16px;border-bottom:1px solid var(--g200);display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.ku{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--maroon);}
+.kd{font-size:12px;color:var(--g600);margin-top:1px;}
+.kcat{font-size:11px;color:var(--g400);margin-top:2px;font-style:italic;}
+.ab{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;white-space:nowrap;flex-shrink:0;}
+.ab.av{background:var(--green-bg);color:var(--green);}
+.ab.ou{background:var(--red-bg);color:var(--red);}
+.ab.pt{background:var(--orange-bg);color:var(--orange);}
+.ab.as{background:var(--purple-bg);color:var(--purple);}
+.ab.ls{background:var(--g100);color:var(--g600);}
+.kcb{padding:12px 16px;}
+.kloc{font-size:12px;color:var(--blue);margin-bottom:4px;}
+.kbr{font-size:11px;background:var(--orange-bg);color:var(--orange);border-radius:4px;padding:3px 8px;margin-bottom:4px;font-weight:600;display:inline-block;}
+.kla{font-size:11px;color:var(--g400);margin-bottom:4px;}
+.kcp{font-size:12px;color:var(--g600);margin-bottom:8px;}
+.kcp strong{color:var(--g800);}
+.kacts{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* SECTION */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.st{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;color:var(--maroon);text-transform:uppercase;letter-spacing:.5px;}
+
+/* TABLE */
+.tw{background:#fff;border-radius:var(--rl);border:1px solid var(--g200);overflow:hidden;box-shadow:var(--sh);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{background:var(--maroon);color:#fff;padding:10px 14px;text-align:left;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+td{padding:10px 14px;border-bottom:1px solid var(--g100);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--maroon-pale);}
+.sp{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
+.sp.out{background:var(--red-bg);color:var(--red);}
+.sp.ret{background:var(--green-bg);color:var(--green);}
+.sp.asgn{background:var(--purple-bg);color:var(--purple);}
+.sp.lost{background:var(--g100);color:var(--g600);}
+
+/* BUTTONS */
+.btn{background:#fff;border:1px solid currentColor;border-radius:var(--r);padding:7px 12px;font-size:12px;font-weight:600;font-family:'Barlow',sans-serif;cursor:pointer;transition:all .15s;}
+.btn.m{color:var(--maroon);}.btn.m:hover{background:var(--maroon-pale);}
+.btn.g{color:var(--green);}.btn.g:hover{background:var(--green-bg);}
+.btn.r{color:var(--red);}.btn.r:hover{background:var(--red-bg);}
+.btn.b{color:var(--blue);}.btn.b:hover{background:var(--blue-bg);}
+.btn.fill{background:var(--maroon);color:#fff;border-color:var(--maroon);}.btn.fill:hover{background:var(--maroon-dark);}
+.btn.fill:disabled,.btn:disabled{background:var(--g200);color:var(--g400);border-color:var(--g200);cursor:not-allowed;}
+.btn.sm{padding:5px 10px;font-size:11px;}
+.btn.grn{background:var(--green);color:#fff;border-color:var(--green);}.btn.grn:hover{background:#155C38;}
+.btn.blu{background:var(--blue);color:#fff;border-color:var(--blue);}.btn.blu:hover{background:#134a80;}
+.abk{background:var(--maroon);color:#fff;border:none;border-radius:var(--r);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;display:flex;align-items:center;gap:6px;transition:background .15s;}
+.abk:hover{background:var(--maroon-dark);}
+.exp{background:#fff;color:var(--maroon);border:1px solid var(--maroon);border-radius:var(--r);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .15s;}
+.exp:hover{background:var(--maroon-pale);}
+.bret{background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;white-space:nowrap;}
+.bret:hover{background:#155C38;}
+.bslp{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;white-space:nowrap;margin-left:4px;}
+.bslp:hover{background:#134a80;}
+.blst{background:var(--red);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;white-space:nowrap;margin-left:4px;}
+.blst:hover{background:#8B1E18;}
+
+/* TOOLBAR */
+.tb{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.si{flex:1;min-width:180px;border:1px solid var(--g200);border-radius:var(--r);padding:8px 14px;font-size:13px;font-family:'Barlow',sans-serif;outline:none;}
+.si:focus{border-color:var(--maroon);}
+.fs{border:1px solid var(--g200);border-radius:var(--r);padding:8px 12px;font-size:13px;font-family:'Barlow',sans-serif;background:#fff;color:var(--g800);outline:none;}
+.fs:focus{border-color:var(--maroon);}
+
+/* MODALS */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.ov.on{display:flex;}
+.md{background:#fff;border-radius:var(--rl);width:100%;max-width:500px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:92vh;display:flex;flex-direction:column;}
+.md.wide{max-width:580px;}
+.mdh{background:var(--maroon);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.mdt{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;text-transform:uppercase;letter-spacing:.5px;}
+.mdc{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0;opacity:.8;}
+.mdc:hover{opacity:1;}
+.mdb{padding:20px;overflow-y:auto;flex:1;}
+.mdf{padding:14px 20px;background:var(--g50);border-top:1px solid var(--g100);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
+.fr{margin-bottom:14px;}
+.fr label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--g600);margin-bottom:5px;}
+.fr input,.fr select,.fr textarea{width:100%;border:1px solid var(--g200);border-radius:var(--r);padding:9px 12px;font-size:14px;font-family:'Barlow',sans-serif;color:var(--g800);transition:border-color .15s;background:#fff;outline:none;}
+.fr input:focus,.fr select:focus,.fr textarea:focus{border-color:var(--maroon);box-shadow:0 0 0 3px rgba(123,28,28,.08);}
+.fr input[readonly]{background:var(--g50);color:var(--g600);}
+.fr textarea{resize:vertical;min-height:70px;}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.bcl{background:#fff;border:none;color:var(--g600);border:1px solid var(--g200);border-radius:var(--r);padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;}
+.bcl:hover{background:var(--g100);}
+.bsb{background:var(--maroon);color:#fff;border:none;border-radius:var(--r);padding:9px 24px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .15s;}
+.bsb:hover{background:var(--maroon-dark);}
+.bsb:disabled{opacity:.6;cursor:not-allowed;}
+.bsb.grn{background:var(--green);}.bsb.grn:hover{background:#155C38;}
+.bsb.red{background:var(--red);}.bsb.red:hover{background:#8B1E18;}
+.fsec{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--maroon);margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--g200);}
+
+/* PIN */
+.pmd{background:#fff;border-radius:var(--rl);width:100%;max-width:360px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.pb{padding:32px 28px;text-align:center;}
+.pi{font-size:36px;margin-bottom:10px;}
+.pt{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--maroon);text-transform:uppercase;margin-bottom:6px;}
+.ps{font-size:13px;color:var(--g600);margin-bottom:20px;}
+.pin{width:100%;text-align:center;font-size:28px;letter-spacing:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:10px;border:1px solid var(--g200);border-radius:var(--r);outline:none;transition:border-color .15s;}
+.pin:focus{border-color:var(--maroon);box-shadow:0 0 0 3px rgba(123,28,28,.08);}
+.pe{color:var(--red);font-size:12px;margin-top:8px;display:none;}
+.pa{display:flex;gap:10px;justify-content:center;margin-top:18px;}
+
+/* SETUP */
+.sc2{background:#fff;border-radius:var(--rl);border:1px solid var(--g200);padding:24px;max-width:680px;box-shadow:var(--sh);margin-bottom:20px;}
+.sc2 h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--maroon);text-transform:uppercase;margin-bottom:6px;}
+.sc2 p{font-size:13px;color:var(--g600);margin-bottom:16px;line-height:1.6;}
+.cs{margin-top:14px;padding:10px 14px;border-radius:var(--r);font-size:13px;font-weight:500;display:none;}
+.cs.ok{background:var(--green-bg);color:var(--green);display:block;}
+.cs.er{background:var(--red-bg);color:var(--red);display:block;}
+.sok{background:var(--green-bg);color:var(--green);border-radius:var(--r);padding:10px 14px;font-size:13px;font-weight:500;margin-top:10px;display:none;}
+
+/* EMPTY */
+.es{text-align:center;padding:40px 24px;color:var(--g400);}
+.es .ic{font-size:36px;margin-bottom:10px;}
+.es p{font-size:13px;}
+
+/* TOAST */
+#TB{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.tst{background:var(--maroon-dark);color:#fff;padding:12px 18px;border-radius:var(--r);font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.25);animation:sli .25s ease;max-width:320px;}
+.tst.s{background:var(--green);}
+.tst.e{background:var(--red);}
+.tst.w{background:var(--orange);}
+@keyframes sli{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* ACTIVITY FEED */
+#AF{position:fixed;bottom:24px;right:24px;width:300px;z-index:500;font-family:'Barlow',sans-serif;}
+#AF .afh{background:var(--maroon);color:#fff;padding:10px 14px;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+#AF .aft{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;}
+#AF .afb{background:#fff;border:1px solid var(--g200);border-top:none;border-radius:0 0 10px 10px;max-height:280px;overflow-y:auto;box-shadow:0 4px 16px rgba(123,28,28,.15);}
+.afi{padding:9px 12px;border-bottom:1px solid var(--g100);font-size:12px;}
+.afi:last-child{border-bottom:none;}
+
+/* DETAIL MODAL WIDE */
+.md.xl{max-width:640px;}
+.drow{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--g100);}
+.drow:last-child{border-bottom:none;}
+.dlbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--g400);width:130px;flex-shrink:0;padding-top:1px;}
+.dval{font-size:13px;color:var(--g800);flex:1;word-break:break-word;}
+.cbtn{background:var(--g50);border:1px solid var(--g200);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;color:var(--g600);transition:all .15s;}
+.cbtn:hover{background:var(--g100);}
+
+/* PRINT PREVIEW */
+.ppreview{background:#f5f5f5;border-radius:var(--r);padding:16px;max-height:400px;overflow-y:auto;margin-bottom:16px;border:1px solid var(--g200);}
+.ppreview .pp-inner{background:#fff;padding:20px;border:1px solid #ccc;font-family:Arial,sans-serif;font-size:12px;}
+
+/* DURATION BADGE */
+.dur{font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap;}
+.dur.d1{background:#FFF9C4;color:#8a6d00;}
+.dur.d2{background:var(--orange-bg);color:var(--orange);}
+.dur.d3{background:var(--red-bg);color:var(--red);}
+.dur.d4{background:#3D0000;color:#ff8a80;}
+
+/* HIGHLIGHT */
+.hl{background:#FFF176;border-radius:2px;padding:0 1px;}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .fg2{grid-template-columns:1fr;}
+  table{font-size:12px;}
+  th,td{padding:8px 10px;}
+  .sgrid{grid-template-columns:repeat(2,1fr);}
+  main{padding:14px;}
+  header{padding:0 14px;}
+  .ntab{padding:10px 12px;font-size:12px;}
+  #AF{width:260px;}
+  #TB{right:12px;bottom:12px;}
+}
+</style>
+</head>
+<body>
+
+<div id="LS"><div class="ll">EMR</div><div class="lt">KEY MONITORING</div><div class="lsp"></div></div>
+<div id="PS"></div>
+
+<header>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="hlogo">BB</div>
+    <h1>EMR Key Monitoring <span>BB Motorpool</span></h1>
+  </div>
+  <div class="hright">
+    <div class="sync" style="flex-direction:column;align-items:flex-end;gap:2px;padding:4px 10px;">
+      <div style="display:flex;align-items:center;gap:6px;"><div class="sdot" id="SD"></div><span id="ST">Connecting...</span></div>
+      <span id="CLK" style="font-size:11px;opacity:.8;font-family:monospace;letter-spacing:.5px;"></span>
+    </div>
+    <span class="rpill vwr" id="RP">Viewer</span>
+    <button class="hbtn" id="LIB" onclick="openPin()">Admin Login</button>
+    <button class="hbtn" id="LOB" onclick="doLogout()" style="display:none">Logout</button>
+  </div>
+</header>
+
+<div id="AB"><span>&#9888;</span><span id="AT"></span></div>
+
+<div class="nav">
+  <div class="ntab on" data-p="dashboard">Dashboard</div>
+  <div class="ntab" data-p="keys">Keys</div>
+  <div class="ntab" data-p="active">Active Issues</div>
+  <div class="ntab" data-p="history">Log History</div>
+  <div class="ntab" data-p="setup">&#9881; Setup</div>
+</div>
+
+<main>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="pg on">
+  <div class="sgrid">
+    <div class="sc cm"><div class="lb">Total Keys</div><div class="vl" id="s1">-</div></div>
+    <div class="sc cg"><div class="lb">Available</div><div class="vl" id="s2">-</div></div>
+    <div class="sc cr"><div class="lb">Out</div><div class="vl" id="s3">-</div></div>
+    <div class="sc co"><div class="lb">Overdue</div><div class="vl" id="s4">-</div></div>
+    <div class="sc cp"><div class="lb">Assigned</div><div class="vl" id="s5">-</div></div>
+    <div class="sc cb"><div class="lb">Lost</div><div class="vl" id="s6">-</div></div>
+    <div class="sc cm"><div class="lb">Today</div><div class="vl" id="s7">-</div></div>
+  </div>
+  <div class="sh"><div class="st">&#9888; Overdue Keys</div></div>
+  <div class="tw" id="OW"><div class="es"><div class="ic">&#10003;</div><p>No overdue keys.</p></div></div>
+  <div style="height:20px"></div>
+  <div class="sh"><div class="st">Recent Activity</div></div>
+  <div class="tw" id="RW"><div class="es"><div class="ic">&#128203;</div><p>No recent activity.</p></div></div>
+  <div style="height:20px"></div>
+  <div class="sh"><div class="st">&#9888; Repeat Offenders</div><span style="font-size:12px;color:var(--g400)">2+ keys out same person</span></div>
+  <div class="tw" id="ROW"><div class="es"><div class="ic">&#128077;</div><p>No repeat offenders.</p></div></div>
+</div>
+
+<!-- KEYS -->
+<div id="page-keys" class="pg">
+  <div class="sh">
+    <div class="st">Key Registry</div>
+    <div style="display:flex;gap:8px;">
+      <button class="exp" id="BIB" onclick="openBulk()" style="display:none">&#128273; Bulk Issue</button>
+      <button class="abk" id="AKB" onclick="openKeyModal()" style="display:none">+ Add Key</button>
+    </div>
+  </div>
+  <div class="tb">
+    <input class="si" id="KS" placeholder="Search unit, description, location..." oninput="renderKeys()">
+    <select class="fs" id="KCF" onchange="renderKeys()">
+      <option value="">All Categories</option>
+    </select>
+  </div>
+  <div class="kgrid" id="KG"><div class="es"><div class="ic">&#128273;</div><p>No keys registered.</p></div></div>
+</div>
+
+<!-- ACTIVE -->
+<div id="page-active" class="pg">
+  <div class="sh"><div class="st">Active Issues <span id="AIC" style="background:var(--orange);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px;display:none"></span></div></div>
+  <div class="tb"><input class="si" id="AS" placeholder="Search by unit, name..." oninput="renderActive()"></div>
+  <div class="tw" id="AW"><div class="es"><div class="ic">&#10003;</div><p>No keys currently issued.</p></div></div>
+</div>
+
+<!-- HISTORY -->
+<div id="page-history" class="pg">
+  <div class="sh"><div class="st">Transaction Log</div><button class="exp" onclick="exportCSV()">&#11015; Export CSV</button></div>
+  <div class="tb">
+    <input class="si" id="HS" placeholder="Search..." oninput="renderHistory()">
+    <select class="fs" id="HF" onchange="renderHistory()">
+      <option value="">All Status</option>
+      <option value="OUT">Out</option>
+      <option value="RETURNED">Returned</option>
+      <option value="ASSIGNED">Assigned</option>
+      <option value="LOST">Lost</option>
+    </select>
+    <input type="date" class="fs" id="HD" onchange="renderHistory()">
+  </div>
+  <div class="tw" id="HW"><div class="es"><div class="ic">&#128203;</div><p>No transactions yet.</p></div></div>
+</div>
+
+<!-- SETUP -->
+<div id="page-setup" class="pg">
+  <div class="sc2">
+    <h2>&#128293; Firebase Status</h2>
+    <p>Project: <strong>emr-key-monitoring</strong>. Test connection below.</p>
+    <button class="bsb" onclick="testFB()">Test Connection</button>
+    <div class="cs" id="FTS"></div>
+  </div>
+  <div class="sc2">
+    <h2>&#128100; Operator Name</h2>
+    <p>Pre-filled in "Issued By" field for all transactions.</p>
+    <div class="fr" style="max-width:320px"><label>Your Name</label><input id="OI" placeholder="e.g. Xavier Ramos"></div>
+    <button class="bsb" onclick="saveOp()">Save</button>
+    <div class="sok" id="OS">&#10003; Saved!</div>
+  </div>
+  <div class="sc2">
+    <h2>&#128274; Admin PIN</h2>
+    <p>Default PIN: <strong>EMR6767</strong>. Required to issue, return, add, edit, or delete keys.</p>
+    <div class="fg2">
+      <div class="fr"><label>Current PIN</label><input type="password" id="PC" placeholder="Current PIN"></div>
+      <div class="fr"><label>New PIN</label><input type="password" id="PN" placeholder="New PIN (min 4)"></div>
+    </div>
+    <button class="bsb" onclick="changePin()">Update PIN</button>
+    <div class="sok" id="PS2">&#10003; PIN updated!</div>
+  </div>
+  <div class="sc2">
+    <h2>&#128193; Categories</h2>
+    <p>Manage key categories. Admin only.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="NCI" placeholder="e.g. Water Truck, Motor Grader..." style="flex:1;border:1px solid var(--g200);border-radius:var(--r);padding:9px 12px;font-size:13px;font-family:'Barlow',sans-serif;outline:none;">
+      <button class="bsb" onclick="addCat()">Add</button>
+    </div>
+    <div id="CL" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- KEY DETAIL MODAL -->
+<div class="ov" id="KDM">
+  <div class="md xl">
+    <div class="mdh">
+      <div class="mdt" id="KDT">Key Details</div>
+      <button class="mdc" onclick="cModal('KDM')">&#215;</button>
+    </div>
+    <div class="mdb" id="KDB"></div>
+    <div class="mdf" id="KDF"></div>
+  </div>
+</div>
+
+<!-- TRANSACTION DETAIL MODAL -->
+<div class="ov" id="TDM">
+  <div class="md xl">
+    <div class="mdh">
+      <div class="mdt">Transaction Details</div>
+      <button class="mdc" onclick="cModal('TDM')">&#215;</button>
+    </div>
+    <div class="mdb" id="TDB"></div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('TDM')">Close</button>
+      <button class="bslp" id="TDP" onclick="pSlipFromDetail()">&#128438; Print Slip</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT PREVIEW MODAL -->
+<div class="ov" id="PPM">
+  <div class="md xl">
+    <div class="mdh">
+      <div class="mdt">Print Preview</div>
+      <button class="mdc" onclick="cModal('PPM')">&#215;</button>
+    </div>
+    <div class="mdb">
+      <div class="ppreview"><div class="pp-inner" id="PPC"></div></div>
+      <div style="font-size:12px;color:var(--g400);text-align:center;">Review the slip above before printing.</div>
+    </div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('PPM')">Cancel</button>
+      <button class="bsb" onclick="doPrint()">&#128438; Print Now</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ACTIVITY FEED -->
+<div id="AF">
+  <div class="afh" onclick="toggleFeed()">
+    <span class="aft">Today's Activity</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="FCC" style="background:var(--gold);color:var(--maroon-dark);border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;">0</span>
+      <span id="FCH" style="font-size:14px;">&#9650;</span>
+    </div>
+  </div>
+  <div class="afb" id="FB">
+    <div id="FL"></div>
+    <div id="FE" style="padding:16px;text-align:center;color:var(--g400);font-size:13px;">No activity today.</div>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div class="ov" id="PM">
+  <div class="pmd">
+    <div class="mdh"><div class="mdt">Admin Login</div></div>
+    <div class="pb">
+      <div class="pi">&#128274;</div>
+      <div class="pt">Enter PIN</div>
+      <div class="ps">Admin access required</div>
+      <input class="pin" type="password" id="PI" maxlength="12" placeholder="&bull;&bull;&bull;&bull;" onkeydown="if(event.key==='Enter')vPin()">
+      <div class="pe" id="PE">Incorrect PIN.</div>
+      <div class="pa">
+        <button class="bsb" onclick="vPin()">Login</button>
+        <button class="bcl" onclick="cModal('PM')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KEY ADD/EDIT MODAL -->
+<div class="ov" id="KM">
+  <div class="md">
+    <div class="mdh"><div class="mdt" id="KMT">Add Key</div><button class="mdc" onclick="cModal('KM')">&#215;</button></div>
+    <div class="mdb">
+      <input type="hidden" id="KID">
+      <div class="fsec">Key Identity</div>
+      <div class="fr"><label>Unit Number *</label><input id="KU" placeholder="e.g. HWO-001, TRK-045"></div>
+      <div class="fr"><label>Key Description *</label><input id="KD" placeholder="e.g. Ignition Key, Cabinet Key"></div>
+      <div class="fg2">
+        <div class="fr"><label>Category</label><select id="KC"><option value="">-- Select --</option></select></div>
+        <div class="fr"><label>Copies</label><input type="number" id="KCP" min="1" value="1"></div>
+      </div>
+      <div class="fg2">
+        <div class="fr">
+          <label>Key Tag</label>
+          <select id="KT">
+            <option value="">-- None --</option>
+            <option value="Original">Original</option>
+            <option value="Duplicate">Duplicate</option>
+            <option value="Spare">Spare</option>
+            <option value="Master">Master</option>
+          </select>
+        </div>
+        <div class="fr">
+          <label>Naming Tip</label>
+          <div style="font-size:11px;color:var(--blue);background:var(--blue-bg);border-radius:var(--r);padding:8px 10px;line-height:1.6;">
+            e.g. <strong>HWO-001-ORIG</strong> for original<br>
+            <strong>HWO-001-DUP</strong> for duplicate
+          </div>
+        </div>
+      </div>
+      <div class="fsec">Storage</div>
+      <div class="fr"><label>&#128205; Storage Location</label><input id="KL" placeholder="e.g. Guard House Box A, Cabinet Drawer 3"></div>
+      <div class="fr"><label>Notes</label><textarea id="KN" placeholder="Any other details..."></textarea></div>
+    </div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('KM')">Cancel</button>
+      <button class="bsb" id="KSB" onclick="saveKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ISSUE MODAL -->
+<div class="ov" id="IM">
+  <div class="md">
+    <div class="mdh"><div class="mdt" id="IMT">Issue Key</div><button class="mdc" onclick="cModal('IM')">&#215;</button></div>
+    <div class="mdb">
+      <input type="hidden" id="IKI">
+      <input type="hidden" id="IUN">
+      <input type="hidden" id="IDS">
+      <input type="hidden" id="ILC">
+      <input type="hidden" id="IMD">
+      <div class="fr"><label>Key / Unit</label><input id="ILB" readonly></div>
+      <div class="fr" id="ICPR" style="display:none"><label>Copy Number</label><select id="ICPS"></select></div>
+      <div class="fr"><label id="ITL">Issued To *</label><input id="ITO" placeholder="Full name of recipient"></div>
+      <div class="fr"><label>Purpose</label><input id="IPU" placeholder="e.g. Site delivery, Maintenance"></div>
+      <div class="fg2" id="IER">
+        <div class="fr"><label>Expected Return</label><input type="datetime-local" id="IEX"></div>
+        <div class="fr"><label>Issued By</label><input id="IIB" placeholder="Your name"></div>
+      </div>
+      <div class="fr" id="IBR" style="display:none"><label>Issued By</label><input id="IIB2" placeholder="Your name"></div>
+      <div class="fr"><label>Remarks</label><textarea id="IRK" placeholder="Optional notes..."></textarea></div>
+      <div style="background:var(--blue-bg);border:1px solid rgba(26,90,154,.2);border-radius:var(--r);padding:10px 12px;margin-top:4px;">
+        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">&#128197; Logging a past transaction? Set the actual date/time:</div>
+        <div class="fr" style="margin-bottom:0"><label style="color:var(--blue)">Actual Date &amp; Time Issued</label><input type="datetime-local" id="IAD"></div>
+      </div>
+    </div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('IM')">Cancel</button>
+      <button class="bsb" id="ISB" onclick="subIssue()">Issue Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- RETURN MODAL -->
+<div class="ov" id="RM">
+  <div class="md">
+    <div class="mdh"><div class="mdt">Return Key</div><button class="mdc" onclick="cModal('RM')">&#215;</button></div>
+    <div class="mdb">
+      <input type="hidden" id="RLI">
+      <input type="hidden" id="RKI">
+      <div class="fr"><label>Key / Unit</label><input id="RLB" readonly></div>
+      <div class="fr"><label>Issued To</label><input id="RIT" readonly></div>
+      <div id="RLD" style="background:var(--blue-bg);border:1px solid rgba(26,90,154,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">&#128205; Return Key To</div>
+        <div id="RLT" style="font-size:14px;font-weight:600;color:var(--blue);">-</div>
+      </div>
+      <div class="fg2">
+        <div class="fr"><label>Returned By *</label><input id="RRB" placeholder="Your name"></div>
+        <div class="fr"><label>Key Condition</label><select id="RCN"><option value="Good">Good</option><option value="Damaged">Damaged</option></select></div>
+      </div>
+      <div class="fr"><label>Remarks</label><textarea id="RRK" placeholder="Optional notes..."></textarea></div>
+      <div style="background:var(--blue-bg);border:1px solid rgba(26,90,154,.2);border-radius:var(--r);padding:10px 12px;margin-top:4px;">
+        <div style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">&#128197; Logging a past return? Set the actual date/time:</div>
+        <div class="fr" style="margin-bottom:0"><label style="color:var(--blue)">Actual Date &amp; Time Returned</label><input type="datetime-local" id="RAD"></div>
+      </div>
+    </div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('RM')">Cancel</button>
+      <button class="bsb grn" id="RSB" onclick="subReturn()">Confirm Return</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOST MODAL -->
+<div class="ov" id="LM">
+  <div class="md">
+    <div class="mdh"><div class="mdt">Mark as Lost</div><button class="mdc" onclick="cModal('LM')">&#215;</button></div>
+    <div class="mdb">
+      <input type="hidden" id="LLI">
+      <input type="hidden" id="LKI">
+      <div style="background:var(--red-bg);border:1px solid rgba(192,51,43,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--red);">&#9888; This will permanently remove the key from available count.</div>
+      <div class="fr"><label>Key / Unit</label><input id="LLB" readonly></div>
+      <div class="fr"><label>Held By</label><input id="LHB" readonly></div>
+      <div class="fr"><label>Reason *</label><textarea id="LRS" placeholder="Explain circumstances of loss..."></textarea></div>
+      <div class="fr"><label>Reported By</label><input id="LRB" placeholder="Your name"></div>
+    </div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('LM')">Cancel</button>
+      <button class="bsb red" id="LSB" onclick="subLost()">Mark as Lost</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK MODAL -->
+<div class="ov" id="BM">
+  <div class="md wide">
+    <div class="mdh"><div class="mdt">Bulk Issue Keys</div><button class="mdc" onclick="cModal('BM')">&#215;</button></div>
+    <div class="mdb">
+      <div class="fr"><label>Borrower Name *</label><input id="BB" placeholder="Full name of recipient"></div>
+      <div class="fr"><label>Purpose</label><input id="BP" placeholder="e.g. Site work, Project deployment"></div>
+      <div class="fg2">
+        <div class="fr"><label>Expected Return</label><input type="datetime-local" id="BE"></div>
+        <div class="fr"><label>Issued By</label><input id="BIY" placeholder="Your name"></div>
+      </div>
+      <div class="fr">
+        <label>Select Keys to Issue *</label>
+        <div id="BKL" style="border:1px solid var(--g200);border-radius:var(--r);max-height:200px;overflow-y:auto;padding:8px;background:var(--g50);"></div>
+      </div>
+      <div id="BSC" style="font-size:12px;color:var(--maroon);font-weight:600;margin-top:6px;"></div>
+      <div class="fr"><label>Remarks</label><textarea id="BRK" placeholder="Optional notes..."></textarea></div>
+    </div>
+    <div class="mdf">
+      <button class="bcl" onclick="cModal('BM')">Cancel</button>
+      <button class="bsb" id="BSB" onclick="subBulk()">Issue Selected Keys</button>
+    </div>
+  </div>
+</div>
+
+<div id="TB"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+var FB = {
+  apiKey:"AIzaSyC3z3GFxh-FiWeJ_KjoP8VFjpvfr6bEmBw",
+  authDomain:"emr-key-monitoring.firebaseapp.com",
+  projectId:"emr-key-monitoring",
+  storageBucket:"emr-key-monitoring.firebasestorage.app",
+  messagingSenderId:"813982533524",
+  appId:"1:813982533524:web:3b7d1e5455620bfecaf181"
+};
+
+// ── STATE ─────────────────────────────────────────────────────
+var PIN      = localStorage.getItem('kms_pin') || 'EMR6767';
+var OP       = localStorage.getItem('kms_op')  || '';
+var isAdmin  = false;
+var db       = null;
+var uKeys    = null;
+var uLogs    = null;
+var uCats    = null;
+var keys     = [];
+var logs     = [];
+var cats     = [];
+var feedVis  = true;
+var odTmr    = null;
+var afterPin = null;
+
+// ── INIT ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  setupNav();
+  startClock();
+  startDurTimer();
+  if (typeof firebase === 'undefined') {
+    setTimeout(initFB, 1000);
+  } else {
+    initFB();
+  }
+});
+
+function initFB() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FB);
+    db = firebase.firestore();
+    startListeners();
+  } catch(e) {
+    hidLS();
+    setSS('er');
+    toast('Firebase error: ' + e.message, 'e');
+    renderAll();
+  }
+}
+
+function startListeners() {
+  setSS('sy');
+  if (uKeys) { uKeys(); uKeys = null; }
+  if (uLogs) { uLogs(); uLogs = null; }
+  if (uCats) { uCats(); uCats = null; }
+
+  var kr = false, lr = false;
+  function tryHide() { if (kr && lr) { hidLS(); renderAll(); } }
+
+  uKeys = db.collection('kms_keys').onSnapshot(function(s) {
+    keys = [];
+    s.forEach(function(d) {
+      var x = d.data();
+      if (x.init === true && Object.keys(x).length === 1) return;
+      keys.push(Object.assign({id:d.id}, x));
+    });
+    keys.sort(function(a,b){ return (a.UnitNumber||'').localeCompare(b.UnitNumber||''); });
+    kr = true; tryHide(); setSS('ok'); renderAll();
+  }, function(e) { kr = true; tryHide(); setSS('er'); toast('Keys error: '+e.message,'e'); });
+
+  uLogs = db.collection('kms_logs').onSnapshot(function(s) {
+    logs = [];
+    s.forEach(function(d) {
+      var x = d.data();
+      if (x.init === true && Object.keys(x).length === 1) return;
+      logs.push(Object.assign({id:d.id}, x));
+    });
+    logs.sort(function(a,b){ return (b.DateIssued||'') < (a.DateIssued||'') ? -1 : 1; });
+    lr = true; tryHide(); setSS('ok'); renderAll();
+  }, function(e) { lr = true; tryHide(); setSS('er'); toast('Logs error: '+e.message,'e'); });
+
+  uCats = db.collection('kms_cats').onSnapshot(function(s) {
+    cats = [];
+    s.forEach(function(d) {
+      var x = d.data();
+      if (x.init === true && Object.keys(x).length === 1) return;
+      cats.push({id:d.id, name:x.name||''});
+    });
+    cats.sort(function(a,b){ return a.name.localeCompare(b.name); });
+    rebuildCatDropdowns();
+    renderCatList();
+  }, function() { cats = []; rebuildCatDropdowns(); renderCatList(); });
+
+  if (odTmr) clearInterval(odTmr);
+  odTmr = setInterval(function(){ checkAlerts(); renderDash(); }, 60000);
+  setTimeout(function(){ hidLS(); renderAll(); }, 5000);
+}
+
+// ── SYNC STATUS ───────────────────────────────────────────────
+function setSS(s) {
+  var d = document.getElementById('SD'), t = document.getElementById('ST');
+  d.className = 'sdot';
+  if (s==='ok')  { t.textContent = 'Live'; }
+  else if (s==='sy') { d.classList.add('sy'); t.textContent = 'Syncing...'; }
+  else           { d.classList.add('er'); t.textContent = 'Sync error'; }
+}
+
+function hidLS() {
+  var e = document.getElementById('LS');
+  if (e) { e.classList.add('hide'); setTimeout(function(){ e.style.display='none'; }, 450); }
+}
+
+// ── NAV ───────────────────────────────────────────────────────
+function setupNav() {
+  document.querySelectorAll('.ntab').forEach(function(t) {
+    t.addEventListener('click', function() {
+      var p = t.dataset.p;
+      if (p === 'setup' && !isAdmin) { afterPin = 'setup'; openPin(); return; }
+      goPage(p);
+    });
+  });
+}
+
+function goPage(p) {
+  document.querySelectorAll('.ntab').forEach(function(t){ t.classList.remove('on'); });
+  document.querySelectorAll('.pg').forEach(function(x){ x.classList.remove('on'); });
+  var tab = document.querySelector('[data-p="'+p+'"]');
+  if (tab) tab.classList.add('on');
+  var pg = document.getElementById('page-'+p);
+  if (pg) pg.classList.add('on');
+  if (p==='setup') loadSetupUI();
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────
+function renderAll() { renderDash(); renderKeys(); renderActive(); renderHistory(); checkAlerts(); renderFeed(); }
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function renderDash() {
+  var out  = logs.filter(function(l){ return l.Status==='OUT'; });
+  var asgn = logs.filter(function(l){ return l.Status==='ASSIGNED'; });
+  var lst  = logs.filter(function(l){ return l.Status==='LOST'; });
+  var now  = new Date();
+  var od   = out.filter(function(l){ return odSev(l,now)>=2; });
+  var tod  = logs.filter(function(l){ return (l.DateIssued||'').slice(0,10)===now.toISOString().slice(0,10); });
+  var tot  = keys.reduce(function(s,k){ return s+(parseInt(k.TotalCopies)||1); }, 0);
+  var avl  = keys.reduce(function(s,k){ return s+(parseInt(k.Available)||0); }, 0);
+
+  g('s1').textContent = tot;
+  g('s2').textContent = avl;
+  g('s3').textContent = out.length;
+  g('s4').textContent = od.length;
+  g('s5').textContent = asgn.length;
+  g('s6').textContent = lst.length;
+  g('s7').textContent = tod.length;
+
+  renderLT('OW', od.slice(0,10), true, false);
+  renderLT('RW', logs.slice(0,10), false, false);
+  renderOffenders();
+}
+
+// ── KEYS ──────────────────────────────────────────────────────
+function renderKeys() {
+  g('AKB').style.display  = isAdmin ? 'flex' : 'none';
+  g('BIB').style.display  = isAdmin ? ''     : 'none';
+
+  var q   = (g('KS').value||'').toLowerCase();
+  var cat = g('KCF').value;
+  var kk  = keys.filter(function(k) {
+    var mq = !q || (k.UnitNumber||'').toLowerCase().includes(q)
+               || (k.KeyDescription||'').toLowerCase().includes(q)
+               || (k.StorageLocation||'').toLowerCase().includes(q);
+    var mc = !cat || (k.Category||'')=== cat;
+    return mq && mc;
+  });
+
+  var grid = g('KG');
+  if (!kk.length) { grid.innerHTML = '<div class="es"><div class="ic">&#128273;</div><p>No keys found.</p></div>'; return; }
+
+  grid.innerHTML = kk.map(function(k) {
+    var total    = parseInt(k.TotalCopies)||1;
+    var avail    = parseInt(k.Available)||0;
+    var out      = parseInt(k.Out)||0;
+    var lost     = parseInt(k.Lost)||0;
+    var asn      = parseInt(k.Assigned)||0;
+
+    var bc='av', bt='Available';
+    if      (avail===0 && lost>0)  { bc='ls'; bt='Lost'; }
+    else if (avail===0 && asn>0)   { bc='as'; bt='Assigned'; }
+    else if (avail===0)            { bc='ou'; bt='All Out'; }
+    else if (out>0 || asn>0)       { bc='pt'; bt=(out+asn)+' Out'; }
+
+    var loc = k.StorageLocation
+      ? '<div class="kloc">&#128205; '+esc(k.StorageLocation)+'</div>'
+      : '<div class="kloc" style="color:var(--g400)">&#128205; No location set</div>';
+
+    var kcat = k.Category ? '<div class="kcat">'+esc(k.Category)+'</div>' : '';
+    var tagColors = {
+      'Original':  'background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;',
+      'Duplicate': 'background:#FFF8E1;color:#F57F17;border:1px solid #FFE082;',
+      'Spare':     'background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;',
+      'Master':    'background:#F3E5F5;color:#6A1B9A;border:1px solid #CE93D8;'
+    };
+    var ktag = k.KeyTag ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:3px;'+( tagColors[k.KeyTag]||'background:var(--g100);color:var(--g600);')+'">'+esc(k.KeyTag)+'</span>' : '';
+
+    // Active logs for this key
+    var aklogs = logs.filter(function(l){ return l.KeyID===k.id && (l.Status==='OUT'||l.Status==='ASSIGNED'); });
+    var bhtml = '';
+    if (aklogs.length>0) {
+      var ic = aklogs[0].Status==='ASSIGNED' ? '&#128204;' : '&#128100;';
+      var lb = aklogs[0].Status==='ASSIGNED' ? ' (Assigned)' : '';
+      bhtml = '<div class="kbr">'+ic+' '+esc(aklogs[0].IssuedTo)+lb+'</div>';
+    }
+
+    // Last activity
+    var klogs = logs.filter(function(l){ return l.KeyID===k.id; });
+    var lahtml = '';
+    if (klogs.length>0) {
+      var la = klogs[0];
+      var lact = la.Status==='RETURNED' ? 'Returned' : la.Status==='ASSIGNED' ? 'Assigned to' : 'Issued to';
+      lahtml = '<div class="kla">Last: '+lact+' '+esc(la.IssuedTo||'')+' &bull; '+tAgo(la.DateIssued)+'</div>';
+    }
+
+    // Copy tracking
+    var cphtml = '';
+    if (total>1) {
+      var cps = [];
+      for (var ci=1; ci<=total; ci++) {
+        var cl = null;
+        for (var li=0; li<aklogs.length; li++) { if ((parseInt(aklogs[li].CopyNumber)||0)===ci) { cl=aklogs[li]; break; } }
+        var cbg = cl ? 'var(--orange-bg)' : 'var(--green-bg)';
+        var cc  = cl ? 'var(--orange)'    : 'var(--green)';
+        var ct  = cl ? esc(cl.IssuedTo)   : 'Available';
+        cps.push('<span style="font-size:10px;background:'+cbg+';color:'+cc+';border-radius:4px;padding:2px 6px;margin:1px;display:inline-block;">Copy '+ci+': '+ct+'</span>');
+      }
+      cphtml = '<div style="margin-bottom:6px;line-height:1.8;">'+cps.join('')+'</div>';
+    }
+
+    var kid = esc(k.id), ku = esc(k.UnitNumber||''), kd = esc(k.KeyDescription||''), kl = esc(k.StorageLocation||'');
+    var ibtn = isAdmin
+      ? '<button class="btn fill sm"'+(avail===0?' disabled':'')+' onclick="event.stopPropagation();oIssue(\''+kid+'\',\''+ku+'\',\''+kd+'\',\''+kl+'\',\'OUT\')">Issue</button>'
+      : '<button class="btn fill sm" disabled>Issue</button>';
+    var abtn = isAdmin ? '<button class="btn b sm" onclick="event.stopPropagation();oIssue(\''+kid+'\',\''+ku+'\',\''+kd+'\',\''+kl+'\',\'ASSIGNED\')">Assign</button>' : '';
+    var ebtn = isAdmin ? '<button class="btn m sm" onclick="event.stopPropagation();oEdit(\''+kid+'\')">Edit</button>' : '';
+    var dbtn = isAdmin ? '<button class="btn r sm" onclick="event.stopPropagation();delKey(\''+kid+'\')">Delete</button>' : '';
+    var hbtn = '<button class="btn m sm" onclick="goPage(\'history\')">History</button>';
+
+    return '<div class="kc" onclick="oKeyDetail(\'' + esc(k.id) + '\')">'
+      +'<div class="kch"><div><div class="ku">'+esc(k.UnitNumber||'')+'</div><div class="kd">'+esc(k.KeyDescription||'')+'</div>'+kcat+ktag+'</div>'
+      +'<span class="ab '+bc+'">'+bt+'</span></div>'
+      +'<div class="kcb">'+loc+bhtml+lahtml+cphtml
+      +'<div class="kcp">Copies: <strong>'+avail+' available</strong> / '+total+' total'+(lost>0?' &bull; <span style="color:var(--red)">'+lost+' lost</span>':'')+'</div>'
+      +'<div class="kacts">'+ibtn+abtn+hbtn+ebtn+dbtn+'</div></div></div>';
+  }).join('');
+}
+
+// ── ACTIVE ────────────────────────────────────────────────────
+function renderActive() {
+  var q = (g('AS').value||'').toLowerCase();
+  var now = new Date();
+  var al = logs.filter(function(l){ return l.Status==='OUT'||l.Status==='ASSIGNED'; });
+  if (q) al = al.filter(function(l){ return (l.UnitNumber||'').toLowerCase().includes(q)||(l.IssuedTo||'').toLowerCase().includes(q)||(l.KeyDescription||'').toLowerCase().includes(q); });
+  var cnt = g('AIC'); cnt.textContent=al.length; cnt.style.display=al.length?'':'none';
+  var w = g('AW');
+  if (!al.length) { w.innerHTML='<div class="es"><div class="ic">&#10003;</div><p>No keys currently issued.</p></div>'; return; }
+  var rows = al.map(function(l) {
+    var sev = odSev(l,now);
+    var pill = l.Status==='ASSIGNED' ? '<span class="sp asgn">Assigned</span>'
+             : sev>=2 ? '<span class="sp" style="'+odStyle(sev)+'display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;">'+odLbl(sev)+'</span>'
+             : '<span class="sp out">Out</span>';
+    var loc = l.StorageLocation ? '<br><span style="font-size:11px;color:var(--blue)">&#128205; Return to: '+esc(l.StorageLocation)+'</span>' : '';
+    var durStr = durBadge(l.DateIssued);
+    var act = isAdmin
+      ? '<button class="bret" onclick="event.stopPropagation();oReturn(\''+esc(l.id)+'\',\''+esc(l.KeyID||'')+'\',\''+esc(l.UnitNumber||'')+' - '+esc(l.KeyDescription||'')+'\',\''+esc(l.IssuedTo||'')+'\',\''+esc(l.StorageLocation||'')+'\')">Return</button>'
+        +'<button class="bslp" onclick="event.stopPropagation();pSlipById(\''+esc(l.id)+'\')">&#128438; Slip</button>'
+        +'<button class="blst" onclick="event.stopPropagation();oLost(\''+esc(l.id)+'\',\''+esc(l.KeyID||'')+'\',\''+esc(l.UnitNumber||'')+' - '+esc(l.KeyDescription||'')+'\',\''+esc(l.IssuedTo||'')+'\')">Lost</button>'
+      : '-';
+    return '<tr style="cursor:pointer;" onclick="oTxDetail(\'' + esc(l.id) + '\')">'
+      +'<td><strong>'+esc(l.UnitNumber||'')+'</strong><br><span style="font-size:11px;color:var(--g400)">'+esc(l.KeyDescription||'')+'</span>'+loc+'</td>'
+      +'<td>'+esc(l.IssuedTo||'')+'</td>'
+      +'<td>'+esc(l.Purpose||'-')+'</td>'
+      +'<td>'+fmtD(l.DateIssued)+'</td>'
+      +'<td>'+(l.ExpectedReturn?fmtD(l.ExpectedReturn):(l.Status==='ASSIGNED'?'<span style="color:var(--purple);font-size:11px;font-weight:600">Permanent</span>':'-'))+'</td>'
+      +'<td>'+durStr+'</td>'
+      +'<td>'+pill+'</td>'
+      +'<td>'+act+'</td></tr>';
+  }).join('');
+  w.innerHTML='<table><thead><tr><th>Unit/Key</th><th>Issued To</th><th>Purpose</th><th>Date Issued</th><th>Exp. Return</th><th>Duration</th><th>Status</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── HISTORY ───────────────────────────────────────────────────
+function renderHistory() {
+  var q=g('HS').value.toLowerCase(), f=g('HF').value, fd=g('HD').value;
+  var ll=logs.slice();
+  if (f) ll=ll.filter(function(l){ return l.Status===f; });
+  if (fd) ll=ll.filter(function(l){ return (l.DateIssued||'').startsWith(fd); });
+  if (q) ll=ll.filter(function(l){ return (l.UnitNumber||'').toLowerCase().includes(q)||(l.IssuedTo||'').toLowerCase().includes(q)||(l.KeyDescription||'').toLowerCase().includes(q)||(l.IssuedBy||'').toLowerCase().includes(q); });
+  renderLT('HW', ll, false, true);
+}
+
+function renderLT(wid, ll, retBtn, retCol) {
+  var w=g(wid);
+  if (!ll.length) { w.innerHTML='<div class="es"><div class="ic">&#128203;</div><p>No records found.</p></div>'; return; }
+  var now=new Date();
+  var rows=ll.map(function(l){
+    var sev=odSev(l,now);
+    var pill=l.Status==='ASSIGNED'?'<span class="sp asgn">Assigned</span>'
+      :l.Status==='LOST'?'<span class="sp lost">Lost</span>'
+      :sev>=2?'<span class="sp" style="'+odStyle(sev)+'display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;">'+odLbl(sev)+'</span>'
+      :l.Status==='OUT'?'<span class="sp out">Out</span>'
+      :'<span class="sp ret">Returned</span>';
+    var xtra='';
+    if (retBtn) {
+      xtra=isAdmin
+        ?'<td><button class="bret" onclick="event.stopPropagation();oReturn(\''+esc(l.id)+'\',\''+esc(l.KeyID||'')+'\',\''+esc(l.UnitNumber||'')+' - '+esc(l.KeyDescription||'')+'\',\''+esc(l.IssuedTo||'')+'\',\''+esc(l.StorageLocation||'')+'\')">Return</button>'
+          +'<button class="bslp" onclick="event.stopPropagation();pSlipById(\''+esc(l.id)+'\')">&#128438; Slip</button></td>'
+        :'<td>-</td>';
+    } else if (retCol) {
+      xtra='<td>'+(l.DateReturned?fmtD(l.DateReturned):'-')+(l.Condition?'<br><span style="font-size:11px;color:var(--g400)">'+esc(l.Condition)+'</span>':'')+'</td>';
+    }
+    return '<tr style="cursor:pointer;" onclick="oTxDetail(\'' + esc(l.id) + '\')">'
+      +'<td><strong>'+esc(l.UnitNumber||'')+'</strong><br><span style="font-size:11px;color:var(--g400)">'+esc(l.KeyDescription||'')+'</span></td>'
+      +'<td>'+esc(l.IssuedTo||'')+'</td>'
+      +'<td>'+esc(l.IssuedBy||'-')+'</td>'
+      +'<td>'+fmtD(l.DateIssued)+'</td>'
+      +'<td>'+(l.ExpectedReturn?fmtD(l.ExpectedReturn):'-')+'</td>'
+      +'<td>'+pill+'</td>'+xtra+'</tr>';
+  }).join('');
+  var lh=retBtn?'<th>Action</th>':retCol?'<th>Date Returned</th>':'';
+  w.innerHTML='<table><thead><tr><th>Unit/Key</th><th>Issued To</th><th>Issued By</th><th>Date Issued</th><th>Exp. Return</th><th>Status</th>'+lh+'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── OVERDUE ───────────────────────────────────────────────────
+function odSev(l,now) {
+  if (l.Status!=='OUT'||!l.ExpectedReturn) return 0;
+  var m=((now||new Date())-new Date(l.ExpectedReturn))/60000;
+  if (m<=0) return 0;
+  if (m<60)   return 1;
+  if (m<240)  return 2;
+  if (m<480)  return 3;
+  if (m<1440) return 4;
+  return 5;
+}
+function odStyle(sev) {
+  if (sev===2) return 'background:#FFF9C4;color:#8a6d00;border:1px solid #f0c040;';
+  if (sev===3) return 'background:var(--orange-bg);color:var(--orange);border:1px solid rgba(192,96,16,.4);';
+  if (sev===4) return 'background:var(--red-bg);color:var(--red);border:1px solid rgba(192,51,43,.4);';
+  if (sev===5) return 'background:#3D0000;color:#ff8a80;border:1px solid #ff4444;';
+  return 'background:var(--red-bg);color:var(--red);';
+}
+function odLbl(sev) {
+  return sev===5 ? '&#128680; URGENT' : 'Overdue';
+}
+function checkAlerts() {
+  var now=new Date();
+  var od=logs.filter(function(l){ return l.Status==='OUT'&&odSev(l,now)>=2; });
+  var urg=od.filter(function(l){ return odSev(l,now)>=5; });
+  var bar=g('AB');
+  if (od.length) {
+    g('AT').textContent=od.length+' key'+(od.length>1?'s':'')+(urg.length?' ('+urg.length+' URGENT)':'')+' overdue - follow up immediately.';
+    bar.classList.add('on');
+    bar.style.background=urg.length?'#3D0000':'#FFF3CD';
+    bar.style.color=urg.length?'#ff8a80':'var(--orange)';
+    bar.style.borderColor=urg.length?'#ff4444':'var(--orange)';
+  } else { bar.classList.remove('on'); }
+}
+
+// ── REPEAT OFFENDERS ─────────────────────────────────────────
+function renderOffenders() {
+  var counts={};
+  logs.filter(function(l){ return l.Status==='OUT'; }).forEach(function(l){
+    var n=(l.IssuedTo||'').trim();
+    counts[n]=(counts[n]||0)+1;
+  });
+  var off=Object.keys(counts).filter(function(n){ return counts[n]>=2; })
+    .map(function(n){ return {name:n,count:counts[n]}; })
+    .sort(function(a,b){ return b.count-a.count; });
+  var w=g('ROW');
+  if (!off.length) { w.innerHTML='<div class="es"><div class="ic">&#128077;</div><p>No repeat offenders.</p></div>'; return; }
+  var rows=off.map(function(o){
+    var ll=logs.filter(function(l){ return l.Status==='OUT'&&(l.IssuedTo||'').trim()===o.name; });
+    return '<tr><td><strong>'+esc(o.name)+'</strong></td>'
+      +'<td><span style="background:var(--red-bg);color:var(--red);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">'+o.count+' keys</span></td>'
+      +'<td style="font-size:12px;color:var(--g600)">'+ll.map(function(l){ return esc(l.UnitNumber||''); }).join(', ')+'</td></tr>';
+  }).join('');
+  w.innerHTML='<table><thead><tr><th>Borrower</th><th>Keys Out</th><th>Units</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── ACTIVITY FEED ─────────────────────────────────────────────
+function renderFeed() {
+  var today=new Date().toISOString().slice(0,10);
+  var tl=logs.filter(function(l){ return (l.DateIssued||'').startsWith(today); });
+  g('FCC').textContent=tl.length;
+  var fe=g('FE'), fl=g('FL');
+  if (!tl.length) { fl.innerHTML=''; fe.style.display='block'; return; }
+  fe.style.display='none';
+  fl.innerHTML=tl.map(function(l){
+    var isR=l.Status==='RETURNED', isA=l.Status==='ASSIGNED', isL=l.Status==='LOST';
+    var col=isR?'var(--green)':isL?'var(--red)':isA?'var(--purple)':'var(--orange)';
+    var act=isR?'returned':isL?'lost':isA?'assigned to':'borrowed';
+    var ic=isR?'&#9166;':isL?'&#10060;':isA?'&#128204;':'&#128273;';
+    return '<div class="afi"><div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="color:'+col+';font-size:14px;flex-shrink:0;margin-top:1px;">'+ic+'</span>'
+      +'<div style="flex:1;"><span style="font-weight:600;">'+esc(l.IssuedTo||'')+'</span> '+act+' <span style="font-weight:600;">'+esc(l.UnitNumber||'')+'</span>'
+      +(l.Purpose?'<div style="color:var(--g400);font-size:11px;margin-top:1px;">'+esc(l.Purpose)+'</div>':'')
+      +'</div><span style="color:var(--g400);font-size:11px;white-space:nowrap;flex-shrink:0;">'+tAgo(l.DateIssued)+'</span></div></div>';
+  }).join('');
+}
+function toggleFeed() {
+  feedVis=!feedVis;
+  g('FB').style.display=feedVis?'':'none';
+  g('FCH').style.transform=feedVis?'':'rotate(180deg)';
+}
+
+// ── CATEGORIES ────────────────────────────────────────────────
+function rebuildCatDropdowns() {
+  var opts='<option value="">-- Select --</option>'+cats.map(function(c){ return '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; }).join('');
+  var kc=g('KC'); if (kc) { var v=kc.value; kc.innerHTML=opts; kc.value=v; }
+  var kcf=g('KCF');
+  if (kcf) {
+    var v2=kcf.value;
+    kcf.innerHTML='<option value="">All Categories</option>'+cats.map(function(c){ return '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; }).join('');
+    kcf.value=v2;
+  }
+}
+function renderCatList() {
+  var el=g('CL'); if (!el) return;
+  if (!cats.length) { el.innerHTML='<div style="color:var(--g400);font-size:13px;text-align:center;padding:12px;">No categories yet.</div>'; return; }
+  el.innerHTML=cats.map(function(c,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--g50);border-radius:var(--r);border:1px solid var(--g200);">'
+      +'<span style="flex:1;font-size:13px;font-weight:500;">'+esc(c.name)+'</span>'
+      +'<button onclick="delCat('+i+')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;font-weight:600;padding:2px 8px;">&#10005;</button></div>';
+  }).join('');
+}
+function addCat() {
+  if (!db) { toast('Firebase not connected.','e'); return; }
+  var name=(g('NCI').value||'').trim();
+  if (!name) { toast('Enter a category name.','e'); return; }
+  if (cats.some(function(c){ return c.name.toLowerCase()===name.toLowerCase(); })) { toast('Category already exists.','e'); return; }
+  db.collection('kms_cats').add({name:name,createdAt:new Date().toISOString()})
+    .then(function(){ g('NCI').value=''; toast('Category added!','s'); })
+    .catch(function(e){ toast('Error: '+e.message,'e'); });
+}
+function delCat(i) {
+  var c=cats[i]; if (!c||!db) return;
+  if (!confirm('Delete "'+c.name+'"?')) return;
+  db.collection('kms_cats').doc(c.id).delete()
+    .then(function(){ toast('Deleted.','w'); })
+    .catch(function(e){ toast('Error: '+e.message,'e'); });
+}
+
+// ── ADD / EDIT KEY ────────────────────────────────────────────
+function openKeyModal() {
+  if (!isAdmin) { afterPin=null; openPin(); return; }
+  g('KMT').textContent='Add Key';
+  g('KID').value='';
+  g('KU').value=''; g('KD').value=''; g('KC').value='';
+  g('KCP').value='1'; g('KCP').disabled=false;
+  g('KT').value='';
+  g('KL').value=''; g('KN').value='';
+  g('KSB').textContent='Add Key';
+  oModal('KM');
+}
+function oEdit(id) {
+  if (!isAdmin) { openPin(); return; }
+  var k=keys.find(function(x){ return x.id===id; }); if (!k) return;
+  g('KMT').textContent='Edit Key';
+  g('KID').value=id;
+  g('KU').value=k.UnitNumber||''; g('KD').value=k.KeyDescription||'';
+  g('KC').value=k.Category||''; g('KCP').value=k.TotalCopies||1; g('KCP').disabled=true;
+  g('KT').value=k.KeyTag||'';
+  g('KL').value=k.StorageLocation||''; g('KN').value=k.Notes||'';
+  g('KSB').textContent='Save Changes';
+  oModal('KM');
+}
+function saveKey() {
+  if (!db) { toast('Firebase not connected.','e'); return; }
+  var id=g('KID').value, un=g('KU').value.trim(), kd=g('KD').value.trim();
+  var cat=g('KC').value, loc=g('KL').value.trim(), notes=g('KN').value.trim();
+  if (!un||!kd) { toast('Unit number and description required.','e'); return; }
+  setBtn('KSB',true,'Saving...');
+  if (!id) {
+    var cp=Math.max(1,parseInt(g('KCP').value)||1);
+    if (keys.some(function(k){ return (k.UnitNumber||'').toLowerCase()===un.toLowerCase(); })) {
+      toast('Unit number already exists.','e'); setBtn('KSB',false,'Add Key'); return;
+    }
+    var kt=g('KT').value;
+    db.collection('kms_keys').add({UnitNumber:un,KeyDescription:kd,Category:cat,KeyTag:kt,TotalCopies:cp,Available:cp,Out:0,Assigned:0,Lost:0,StorageLocation:loc,Notes:notes,CreatedAt:new Date().toISOString()})
+      .then(function(){ cModal('KM'); toast('Key added!','s'); setBtn('KSB',false,'Add Key'); })
+      .catch(function(e){ toast('Error: '+e.message,'e'); setBtn('KSB',false,'Add Key'); });
+  } else {
+    var kt=g('KT').value;
+    db.collection('kms_keys').doc(id).update({UnitNumber:un,KeyDescription:kd,Category:cat,KeyTag:kt,StorageLocation:loc,Notes:notes,UpdatedAt:new Date().toISOString()})
+      .then(function(){ cModal('KM'); toast('Key updated!','s'); setBtn('KSB',false,'Save Changes'); })
+      .catch(function(e){ toast('Error: '+e.message,'e'); setBtn('KSB',false,'Save Changes'); });
+  }
+}
+function delKey(id) {
+  if (!db) return;
+  var k=keys.find(function(x){ return x.id===id; }); if (!k) return;
+  if ((parseInt(k.Out)||0)>0||(parseInt(k.Assigned)||0)>0) { toast('Cannot delete - key has copies out.','e'); return; }
+  if (!confirm('Delete "'+k.UnitNumber+'? This cannot be undone.')) return;
+  db.collection('kms_keys').doc(id).delete().then(function(){ toast('Deleted.','w'); }).catch(function(e){ toast(e.message,'e'); });
+}
+
+// ── ISSUE ─────────────────────────────────────────────────────
+function oIssue(kid, kun, kds, kloc, mode) {
+  if (!isAdmin) { openPin(); return; }
+  g('IKI').value=kid; g('IUN').value=kun; g('IDS').value=kds; g('ILC').value=kloc; g('IMD').value=mode;
+  g('ILB').value=kun+' - '+kds;
+  g('ITO').value=''; g('IPU').value=''; g('IRK').value='';
+  g('IIB').value=OP; g('IIB2').value=OP;
+  g('IAD').value=lDT(new Date()); // defaults to now, Admin can change for past transactions
+
+  // Copy selector
+  var k=keys.find(function(x){ return x.id===kid; });
+  var total=k?parseInt(k.TotalCopies)||1:1;
+  var cprow=g('ICPR'), cpsel=g('ICPS');
+  if (total>1) {
+    var al=logs.filter(function(l){ return l.KeyID===kid&&(l.Status==='OUT'||l.Status==='ASSIGNED'); });
+    var used=al.map(function(l){ return parseInt(l.CopyNumber)||0; });
+    var opts='';
+    for (var ci=1;ci<=total;ci++) {
+      var isUsed=used.indexOf(ci)!==-1;
+      opts+='<option value="'+ci+'"'+(isUsed?' disabled':'')+'>Copy '+ci+(isUsed?' (Out)':' (Available)')+'</option>';
+    }
+    cpsel.innerHTML=opts; cprow.style.display='';
+  } else { cprow.style.display='none'; cpsel.innerHTML='<option value="1">Copy 1</option>'; }
+
+  if (mode==='ASSIGNED') {
+    g('IMT').textContent='Assign Key (Permanent)';
+    g('ITL').textContent='Assigned To *';
+    g('IER').style.display='none'; g('IBR').style.display='';
+    g('ISB').textContent='Confirm Assignment';
+  } else {
+    g('IMT').textContent='Issue Key';
+    g('ITL').textContent='Issued To *';
+    g('IER').style.display=''; g('IBR').style.display='none';
+    g('ISB').textContent='Issue Key';
+    var tom=new Date(); tom.setDate(tom.getDate()+1);
+    g('IEX').value=lDT(tom);
+  }
+  oModal('IM');
+}
+function subIssue() {
+  if (!db) { toast('Firebase not connected.','e'); return; }
+  var mode=g('IMD').value, to=(g('ITO').value||'').trim();
+  if (!to) { toast('Enter borrower name.','e'); return; }
+  var kid=g('IKI').value, kun=g('IUN').value, kds=g('IDS').value, kloc=g('ILC').value;
+  var pur=(g('IPU').value||'').trim();
+  var iby=(mode==='ASSIGNED'?g('IIB2').value:g('IIB').value).trim()||OP;
+  var exp=mode==='OUT'?g('IEX').value:null;
+  var rmk=(g('IRK').value||'').trim();
+  var cpn=parseInt(g('ICPS').value)||1;
+  var cat=(keys.find(function(k){ return k.id===kid; })||{}).Category||'';
+  var k=keys.find(function(x){ return x.id===kid; });
+  setBtn('ISB',true,'Saving...');
+  var bat=db.batch();
+  var lr=db.collection('kms_logs').doc();
+  var actualDate = g('IAD').value ? new Date(g('IAD').value).toISOString() : new Date().toISOString();
+  var keyTag = (keys.find(function(k){ return k.id===kid; })||{}).KeyTag||'';
+  bat.set(lr,{KeyID:kid,UnitNumber:kun,KeyDescription:kds,Category:cat,KeyTag:keyTag,CopyNumber:cpn,IssuedTo:to,IssuedBy:iby,Purpose:pur,DateIssued:actualDate,ExpectedReturn:exp?new Date(exp).toISOString():null,Remarks:rmk,Status:mode,StorageLocation:kloc,DateReturned:null,ReturnedBy:null,ReturnRemarks:null,Condition:null});
+  if (k) {
+    var upd={Available:Math.max(0,(parseInt(k.Available)||0)-1)};
+    if (mode==='ASSIGNED') upd.Assigned=(parseInt(k.Assigned)||0)+1;
+    else upd.Out=(parseInt(k.Out)||0)+1;
+    bat.update(db.collection('kms_keys').doc(kid),upd);
+  }
+  bat.commit().then(function(){
+    cModal('IM'); toast(mode==='ASSIGNED'?'Key assigned!':'Key issued!','s');
+    setBtn('ISB',false,mode==='ASSIGNED'?'Confirm Assignment':'Issue Key');
+    // Auto show print preview
+    var previewData={KeyID:kid,UnitNumber:kun,KeyDescription:kds,Category:cat,CopyNumber:cpn,IssuedTo:to,IssuedBy:iby,Purpose:pur,DateIssued:new Date().toISOString(),ExpectedReturn:exp?new Date(exp).toISOString():null,Remarks:rmk,Status:mode,StorageLocation:kloc};
+    showPrintPreview(previewData);
+  }).catch(function(e){ toast('Error: '+e.message,'e'); setBtn('ISB',false,mode==='ASSIGNED'?'Confirm Assignment':'Issue Key'); });
+}
+
+// ── RETURN ────────────────────────────────────────────────────
+function oReturn(lid, kid, lbl, ito, loc) {
+  g('RLI').value=lid; g('RKI').value=kid;
+  g('RLB').value=lbl; g('RIT').value=ito;
+  g('RLT').textContent=loc||'No storage location set.';
+  g('RRB').value=OP; g('RCN').value='Good'; g('RRK').value='';
+  g('RAD').value=lDT(new Date()); // defaults to now, Admin can change for past returns
+  oModal('RM');
+}
+function subReturn() {
+  if (!db) { toast('Firebase not connected.','e'); return; }
+  var rb=(g('RRB').value||'').trim();
+  if (!rb) { toast('Enter who returned the key.','e'); return; }
+  var lid=g('RLI').value, kid=g('RKI').value;
+  var cnd=g('RCN').value, rmk=(g('RRK').value||'').trim();
+  var l=logs.find(function(x){ return x.id===lid; });
+  var k=keys.find(function(x){ return x.id===kid; });
+  var wasAsgn=l&&l.Status==='ASSIGNED';
+  setBtn('RSB',true,'Saving...');
+  var bat=db.batch();
+  var actualRetDate = g('RAD').value ? new Date(g('RAD').value).toISOString() : new Date().toISOString();
+  bat.update(db.collection('kms_logs').doc(lid),{Status:'RETURNED',DateReturned:actualRetDate,ReturnedBy:rb,ReturnRemarks:rmk,Condition:cnd});
+  if (k) {
+    var upd={Available:(parseInt(k.Available)||0)+1};
+    if (wasAsgn) upd.Assigned=Math.max(0,(parseInt(k.Assigned)||0)-1);
+    else upd.Out=Math.max(0,(parseInt(k.Out)||0)-1);
+    bat.update(db.collection('kms_keys').doc(kid),upd);
+  }
+  bat.commit().then(function(){ cModal('RM'); toast('Key returned!','s'); setBtn('RSB',false,'Confirm Return'); })
+    .catch(function(e){ toast('Error: '+e.message,'e'); setBtn('RSB',false,'Confirm Return'); });
+}
+
+// ── LOST ──────────────────────────────────────────────────────
+function oLost(lid, kid, lbl, hby) {
+  g('LLI').value=lid; g('LKI').value=kid;
+  g('LLB').value=lbl; g('LHB').value=hby;
+  g('LRS').value=''; g('LRB').value=OP;
+  oModal('LM');
+}
+function subLost() {
+  if (!db) { toast('Firebase not connected.','e'); return; }
+  var rs=(g('LRS').value||'').trim();
+  if (!rs) { toast('Please provide a reason.','e'); return; }
+  var lid=g('LLI').value, kid=g('LKI').value, rb=(g('LRB').value||'').trim();
+  var l=logs.find(function(x){ return x.id===lid; });
+  var k=keys.find(function(x){ return x.id===kid; });
+  var wasAsgn=l&&l.Status==='ASSIGNED';
+  setBtn('LSB',true,'Saving...');
+  var bat=db.batch();
+  bat.update(db.collection('kms_logs').doc(lid),{Status:'LOST',LostReason:rs,ReportedBy:rb,LostDate:new Date().toISOString()});
+  if (k) {
+    var upd={Lost:(parseInt(k.Lost)||0)+1};
+    if (wasAsgn) upd.Assigned=Math.max(0,(parseInt(k.Assigned)||0)-1);
+    else upd.Out=Math.max(0,(parseInt(k.Out)||0)-1);
+    bat.update(db.collection('kms_keys').doc(kid),upd);
+  }
+  bat.commit().then(function(){ cModal('LM'); toast('Marked as lost.','w'); setBtn('LSB',false,'Mark as Lost'); })
+    .catch(function(e){ toast('Error: '+e.message,'e'); setBtn('LSB',false,'Mark as Lost'); });
+}
+
+// ── BULK ISSUE ────────────────────────────────────────────────
+function openBulk() {
+  if (!isAdmin) { openPin(); return; }
+  g('BB').value=''; g('BP').value=''; g('BRK').value=''; g('BIY').value=OP;
+  var tom=new Date(); tom.setDate(tom.getDate()+1); g('BE').value=lDT(tom);
+  var avail=keys.filter(function(k){ return (parseInt(k.Available)||0)>0; });
+  var bl=g('BKL');
+  if (!avail.length) { bl.innerHTML='<div style="color:var(--g400);font-size:13px;padding:8px;">No keys available.</div>'; }
+  else {
+    bl.innerHTML=avail.map(function(k){
+      return '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;font-size:13px;">'
+        +'<input type="checkbox" value="'+esc(k.id)+'" data-unit="'+esc(k.UnitNumber||'')+'" data-desc="'+esc(k.KeyDescription||'')+'" data-loc="'+esc(k.StorageLocation||'')+'" data-cat="'+esc(k.Category||'')+'" onchange="updBulk()">'
+        +'<span><strong>'+esc(k.UnitNumber||'')+'</strong> - '+esc(k.KeyDescription||'')+(k.Category?' <span style="color:var(--g400);font-size:11px;">('+esc(k.Category)+')</span>':'')+'</span></label>';
+    }).join('');
+  }
+  g('BSC').textContent=''; oModal('BM');
+}
+function updBulk() {
+  var chk=document.querySelectorAll('#BKL input:checked');
+  g('BSC').textContent=chk.length?chk.length+' key'+(chk.length>1?'s':'')+' selected':'';
+}
+function subBulk() {
+  if (!db) { toast('Firebase not connected.','e'); return; }
+  var br=(g('BB').value||'').trim();
+  if (!br) { toast('Enter borrower name.','e'); return; }
+  var chk=document.querySelectorAll('#BKL input:checked');
+  if (!chk.length) { toast('Select at least one key.','e'); return; }
+  var pur=(g('BP').value||'').trim(), iby=(g('BIY').value||'').trim()||OP;
+  var exp=g('BE').value, rmk=(g('BRK').value||'').trim();
+  var now=new Date().toISOString();
+  setBtn('BSB',true,'Issuing...');
+  var bat=db.batch(), kupd={};
+  chk.forEach(function(cb){
+    var kid=cb.value, un=cb.dataset.unit, ds=cb.dataset.desc, lc=cb.dataset.loc, ct=cb.dataset.cat;
+    var k=keys.find(function(x){ return x.id===kid; });
+    var lr=db.collection('kms_logs').doc();
+    var bkt=(keys.find(function(x){ return x.id===kid; })||{}).KeyTag||'';
+    bat.set(lr,{KeyID:kid,UnitNumber:un,KeyDescription:ds,Category:ct,KeyTag:bkt,CopyNumber:1,IssuedTo:br,IssuedBy:iby,Purpose:pur,DateIssued:now,ExpectedReturn:exp?new Date(exp).toISOString():null,Remarks:rmk,Status:'OUT',StorageLocation:lc,BulkIssue:true,DateReturned:null,ReturnedBy:null,ReturnRemarks:null,Condition:null});
+    if (k&&!kupd[kid]) kupd[kid]={Available:Math.max(0,(parseInt(k.Available)||0)-1),Out:(parseInt(k.Out)||0)+1};
+  });
+  Object.keys(kupd).forEach(function(kid){ bat.update(db.collection('kms_keys').doc(kid),kupd[kid]); });
+  bat.commit().then(function(){
+    cModal('BM'); toast(chk.length+' keys issued to '+br+'!','s'); setBtn('BSB',false,'Issue Selected Keys');
+    if (confirm('Print combined slip for '+br+'?')) {
+      pBulkSlip(br,pur,iby,exp,rmk,Array.from(chk).map(function(c){ return {u:c.dataset.unit,d:c.dataset.desc,l:c.dataset.loc}; }));
+    }
+  }).catch(function(e){ toast('Error: '+e.message,'e'); setBtn('BSB',false,'Issue Selected Keys'); });
+}
+
+// ── PRINT ─────────────────────────────────────────────────────
+function pSlipById(lid) {
+  var l=logs.find(function(x){ return x.id===lid; });
+  if (!l) { toast('Record not found.','e'); return; }
+  pSlip(l);
+}
+function pSlip(l) {
+  var title=l.Status==='ASSIGNED'?'KEY ASSIGNMENT SLIP':'KEY ISSUANCE SLIP';
+  g('PS').innerHTML='<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:2px solid #7B1C1C;">'
+    +'<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="font-size:22px;font-weight:700;color:#7B1C1C;">BIGBEN GROUP</div>'
+    +'<div style="font-size:13px;color:#5C5454;">EMR - BB Motorpool &bull; Dampol 1st, Pulilan, Bulacan</div>'
+    +'<div style="margin-top:8px;font-size:16px;font-weight:700;letter-spacing:2px;border-top:2px solid #7B1C1C;border-bottom:2px solid #7B1C1C;padding:6px 0;">'+title+'</div>'
+    +'</div>'
+    +'<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:20px;">'
+    +pRow('Unit / Key:',esc(l.UnitNumber||'')+' - '+esc(l.KeyDescription||''),true)
+    +pRow('Category:',esc(l.Category||'-'),false)
+    +(l.KeyTag?pRow('Key Tag:',esc(l.KeyTag),true):'')
+    +pRow('Issued To:',esc(l.IssuedTo||''),true)
+    +pRow('Purpose:',esc(l.Purpose||'-'),false)
+    +pRow('Date Issued:',fmtD(l.DateIssued),true)
+    +pRow('Expected Return:',l.Status==='ASSIGNED'?'Permanent Assignment':(l.ExpectedReturn?fmtD(l.ExpectedReturn):'-'),false)
+    +pRow('Storage Location:',esc(l.StorageLocation||'-'),true)
+    +pRow('Issued By:',esc(l.IssuedBy||'-'),false)
+    +pRow('Remarks:',esc(l.Remarks||'-'),true)
+    +'</table>'
+    +'<div style="margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">'
+    +'<div style="text-align:center;"><div style="border-top:1px solid #2E2929;padding-top:8px;font-size:12px;color:#5C5454;">Borrower&#39;s Signature over Printed Name</div><div style="font-size:11px;color:#9A9090;margin-top:4px;">I acknowledge receipt of the above key.</div></div>'
+    +'<div style="text-align:center;"><div style="border-top:1px solid #2E2929;padding-top:8px;font-size:12px;color:#5C5454;">Issued By / Guard on Duty</div><div style="font-size:11px;color:#9A9090;margin-top:4px;">Authorized Motorpool Personnel</div></div>'
+    +'</div>'
+    +'<div style="margin-top:20px;text-align:center;font-size:10px;color:#9A9090;border-top:1px solid #DDD9D9;padding-top:10px;">EMR Key Monitoring &bull; Printed: '+new Date().toLocaleString('en-PH')+'</div>'
+    +'</div>';
+  window.print();
+}
+function pRow(label, val, shade) {
+  return '<tr'+(shade?' style="background:#F8EFEF;"':'')+'>'
+    +'<td style="padding:6px 4px;color:#5C5454;width:38%;">'+label+'</td>'
+    +'<td style="padding:6px 4px;font-weight:600;">'+val+'</td></tr>';
+}
+function pBulkSlip(br, pur, iby, exp, rmk, kks) {
+  var krows=kks.map(function(k,i){ return pRow((i+1)+'.', esc(k.u)+' - '+esc(k.d)+(k.l?' (Return to: '+esc(k.l)+')':''), i%2===0); }).join('');
+  g('PS').innerHTML='<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:2px solid #7B1C1C;">'
+    +'<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="font-size:22px;font-weight:700;color:#7B1C1C;">BIGBEN GROUP</div>'
+    +'<div style="font-size:13px;color:#5C5454;">EMR - BB Motorpool &bull; Dampol 1st, Pulilan, Bulacan</div>'
+    +'<div style="margin-top:8px;font-size:16px;font-weight:700;letter-spacing:2px;border-top:2px solid #7B1C1C;border-bottom:2px solid #7B1C1C;padding:6px 0;">BULK KEY ISSUANCE SLIP</div>'
+    +'</div>'
+    +'<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:12px;">'
+    +pRow('Issued To:',esc(br),true)+pRow('Purpose:',esc(pur||'-'),false)
+    +pRow('Date Issued:',fmtD(new Date().toISOString()),true)
+    +pRow('Expected Return:',exp?fmtD(new Date(exp).toISOString()):'-',false)
+    +pRow('Issued By:',esc(iby||'-'),true)+pRow('Remarks:',esc(rmk||'-'),false)
+    +'</table>'
+    +'<div style="font-size:12px;font-weight:700;color:#7B1C1C;text-transform:uppercase;margin-bottom:6px;">Keys Issued ('+kks.length+'):</div>'
+    +'<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:20px;">'+krows+'</table>'
+    +'<div style="margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">'
+    +'<div style="text-align:center;"><div style="border-top:1px solid #2E2929;padding-top:8px;font-size:12px;color:#5C5454;">Borrower&#39;s Signature over Printed Name</div><div style="font-size:11px;color:#9A9090;margin-top:4px;">I acknowledge receipt of the above keys.</div></div>'
+    +'<div style="text-align:center;"><div style="border-top:1px solid #2E2929;padding-top:8px;font-size:12px;color:#5C5454;">Issued By / Guard on Duty</div><div style="font-size:11px;color:#9A9090;margin-top:4px;">Authorized Motorpool Personnel</div></div>'
+    +'</div>'
+    +'<div style="margin-top:20px;text-align:center;font-size:10px;color:#9A9090;border-top:1px solid #DDD9D9;padding-top:10px;">EMR Key Monitoring &bull; Printed: '+new Date().toLocaleString('en-PH')+'</div>'
+    +'</div>';
+  window.print();
+}
+
+// ── EXPORT CSV ────────────────────────────────────────────────
+function exportCSV() {
+  var rows=[['Unit','Description','Category','Key Tag','Issued To','Issued By','Purpose','Date Issued','Exp Return','Date Returned','Returned By','Condition','Status','Location','Remarks']];
+  logs.forEach(function(l){ rows.push([l.UnitNumber||'',l.KeyDescription||'',l.Category||'',l.KeyTag||'',l.IssuedTo||'',l.IssuedBy||'',l.Purpose||'',l.DateIssued?fmtD(l.DateIssued):'',l.ExpectedReturn?fmtD(l.ExpectedReturn):'',l.DateReturned?fmtD(l.DateReturned):'',l.ReturnedBy||'',l.Condition||'',l.Status||'',l.StorageLocation||'',l.Remarks||'']); });
+  var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='KMS-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+
+// ── FIREBASE TEST ─────────────────────────────────────────────
+function testFB() {
+  var s=g('FTS'); s.className='cs'; s.textContent='Testing...'; s.style.display='block';
+  if (!db) { s.className='cs er'; s.textContent='Firebase not connected.'; return; }
+  db.collection('_ping').doc('test').set({t:Date.now()})
+    .then(function(){ s.className='cs ok'; s.textContent='Firebase connection working!'; })
+    .catch(function(e){ s.className='cs er'; s.textContent='Error: '+e.message; });
+}
+
+// ── PIN ───────────────────────────────────────────────────────
+function openPin() {
+  g('PI').value=''; g('PE').style.display='none';
+  oModal('PM');
+  setTimeout(function(){ g('PI').focus(); }, 120);
+}
+function vPin() {
+  if (g('PI').value===PIN) {
+    isAdmin=true; cModal('PM');
+    g('RP').textContent='Admin'; g('RP').className='rpill adm';
+    g('LIB').style.display='none'; g('LOB').style.display='';
+    renderAll();
+    toast('Admin access granted.','s');
+    if (afterPin) { goPage(afterPin); afterPin=null; }
+  } else {
+    g('PE').style.display='block'; g('PI').value=''; g('PI').focus();
+  }
+}
+function doLogout() {
+  isAdmin=false;
+  g('RP').textContent='Viewer'; g('RP').className='rpill vwr';
+  g('LIB').style.display=''; g('LOB').style.display='none';
+  goPage('dashboard'); renderAll(); toast('Logged out.','');
+}
+function changePin() {
+  var cur=g('PC').value, nw=g('PN').value;
+  if (cur!==PIN) { toast('Current PIN incorrect.','e'); return; }
+  if (!nw||nw.length<4) { toast('New PIN must be at least 4 chars.','e'); return; }
+  PIN=nw; localStorage.setItem('kms_pin',nw);
+  g('PC').value=''; g('PN').value='';
+  showOK('PS2');
+}
+
+// ── SETUP ─────────────────────────────────────────────────────
+function loadSetupUI() {
+  g('OI').value=OP;
+  renderCatList();
+  rebuildCatDropdowns();
+}
+function saveOp() {
+  OP=(g('OI').value||'').trim();
+  localStorage.setItem('kms_op',OP);
+  showOK('OS');
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────
+function oModal(id) { g(id).classList.add('on'); }
+function cModal(id) { g(id).classList.remove('on'); }
+document.querySelectorAll('.ov').forEach(function(o){ o.addEventListener('click',function(e){ if(e.target===o) o.classList.remove('on'); }); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') document.querySelectorAll('.ov.on').forEach(function(o){ o.classList.remove('on'); }); });
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg, t) {
+  var el=document.createElement('div'); el.className='tst '+(t||''); el.textContent=msg;
+  g('TB').appendChild(el); setTimeout(function(){ el.remove(); },3500);
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
+function g(id) { return document.getElementById(id); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+function fmtD(s) {
+  if (!s) return '-';
+  var d=new Date(s); if (isNaN(d.getTime())) return String(s);
+  return d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+}
+function lDT(d) {
+  var p=function(n){ return String(n).padStart(2,'0'); };
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+}
+function tAgo(iso) {
+  if (!iso) return '';
+  var diff=Math.floor((Date.now()-new Date(iso).getTime())/1000);
+  if (diff<60) return 'just now';
+  if (diff<3600) return Math.floor(diff/60)+'m ago';
+  if (diff<86400) return Math.floor(diff/3600)+'h ago';
+  return Math.floor(diff/86400)+'d ago';
+}
+function setBtn(id, dis, lbl) { var b=g(id); if(!b) return; b.disabled=dis; b.textContent=lbl; }
+function showOK(id) { var e=g(id); e.style.display='block'; setTimeout(function(){ e.style.display='none'; },3000); }
+
+// ── LIVE CLOCK ────────────────────────────────────────────────
+function startClock() {
+  function tick() {
+    var now = new Date();
+    var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var d = days[now.getDay()] + ' '
+      + now.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})
+      + ' ' + now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+    var el = g('CLK'); if (el) el.textContent = d;
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ── LIVE DURATION TIMER ───────────────────────────────────────
+function durBadge(iso) {
+  if (!iso) return '-';
+  var ms = Date.now() - new Date(iso).getTime();
+  if (ms < 0) return '-';
+  var h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  var txt = h > 0 ? h+'h '+m+'m' : m+'m';
+  var cls = h >= 24 ? 'd4' : h >= 8 ? 'd3' : h >= 4 ? 'd2' : h >= 1 ? 'd1' : '';
+  return '<span class="dur '+cls+'">'+txt+'</span>';
+}
+
+function startDurTimer() {
+  setInterval(function() {
+    var active = document.getElementById('page-active');
+    if (active && active.classList.contains('on')) renderActive();
+  }, 60000);
+}
+
+// ── KEY DETAIL MODAL ──────────────────────────────────────────
+function oKeyDetail(id) {
+  if (!id) return;
+  var k = keys.find(function(x){ return x.id===id; });
+  if (!k) return;
+  g('KDT').textContent = (k.UnitNumber||'') + ' Details';
+
+  var aklogs = logs.filter(function(l){ return l.KeyID===id && (l.Status==='OUT'||l.Status==='ASSIGNED'); });
+  var allKlogs = logs.filter(function(l){ return l.KeyID===id; });
+  var total = parseInt(k.TotalCopies)||1, avail = parseInt(k.Available)||0;
+  var out = parseInt(k.Out)||0, lost = parseInt(k.Lost)||0, asn = parseInt(k.Assigned)||0;
+
+  var statusColor = avail===0 ? 'var(--red)' : out>0||asn>0 ? 'var(--orange)' : 'var(--green)';
+  var statusText  = avail===0 ? (lost>0?'Lost':(asn>0?'Assigned':'All Out')) : avail+'/'+total+' Available';
+
+  var currentHolder = '';
+  if (aklogs.length > 0) {
+    currentHolder = aklogs.map(function(l){
+      return '<div style="padding:4px 0;">'
+        +'<span style="font-weight:600;">'+esc(l.IssuedTo)+'</span>'
+        +' <span style="color:var(--g400);font-size:11px;">('+l.Status+(l.CopyNumber?' - Copy '+l.CopyNumber:'')+')</span>'
+        +(l.Purpose?' <span style="color:var(--g600);font-size:12px;">- '+esc(l.Purpose)+'</span>':'')
+        +'</div>';
+    }).join('');
+  }
+
+  var copyStatus = '';
+  if (total > 1) {
+    var cps = [];
+    for (var ci=1; ci<=total; ci++) {
+      var cl = null;
+      for (var li=0; li<aklogs.length; li++) { if ((parseInt(aklogs[li].CopyNumber)||0)===ci) { cl=aklogs[li]; break; } }
+      cps.push('<span style="font-size:11px;background:'+(cl?'var(--orange-bg)':'var(--green-bg)')+';color:'+(cl?'var(--orange)':'var(--green)')+';border-radius:4px;padding:2px 7px;margin:2px;display:inline-block;">Copy '+ci+': '+(cl?esc(cl.IssuedTo):'Available')+'</span>');
+    }
+    copyStatus = cps.join('');
+  }
+
+  var html = '<div style="padding:4px 0;">'
+    + drow('Unit Number', esc(k.UnitNumber||'-'))
+    + drow('Description', esc(k.KeyDescription||'-'))
+    + drow('Category', esc(k.Category||'-'))
+    + (k.KeyTag ? drow('Key Tag', '<span style="font-weight:700;color:var(--maroon);">'+esc(k.KeyTag)+'</span>') : '')
+    + drow('Storage Location', k.StorageLocation ? '&#128205; <strong>'+esc(k.StorageLocation)+'</strong>' : '<span style="color:var(--g400)">Not set</span>')
+    + drow('Status', '<span style="color:'+statusColor+';font-weight:600;">'+statusText+'</span>')
+    + drow('Copies', total > 1 ? copyStatus : '<span style="color:var(--green);font-weight:600;">'+avail+' of '+total+' available</span>')
+    + (currentHolder ? drow('Currently With', currentHolder) : '')
+    + drow('Total Transactions', allKlogs.length+' transactions')
+    + drow('Lost Count', lost > 0 ? '<span style="color:var(--red);font-weight:600;">'+lost+' lost</span>' : '0')
+    + drow('Notes', esc(k.Notes||'-'))
+    + '</div>';
+
+  g('KDB').innerHTML = html;
+
+  var kids = esc(k.id), ku = esc(k.UnitNumber||''), kds = esc(k.KeyDescription||''), kl = esc(k.StorageLocation||'');
+  g('KDF').innerHTML = '<button class="bcl" onclick="cModal(&quot;KDM&quot;)">Close</button>'
+    + '<button class="cbtn" onclick="copyKeyInfo(&quot;' + kids + '&quot;)">&#128203; Copy Info</button>'
+    + (isAdmin && avail > 0 ? '<button class="bsb" onclick="cModal(&quot;KDM&quot;);oIssue(&quot;' + kids + '&quot;,&quot;' + ku + '&quot;,&quot;' + kds + '&quot;,&quot;' + kl + '&quot;,&quot;OUT&quot;)">Issue Key</button>' : '');
+
+  oModal('KDM');
+}
+
+function drow(label, val) {
+  return '<div class="drow"><div class="dlbl">'+label+'</div><div class="dval">'+val+'</div></div>';
+}
+
+function copyKeyInfo(id) {
+  var k = keys.find(function(x){ return x.id===id; }); if (!k) return;
+  var avail = parseInt(k.Available)||0, total = parseInt(k.TotalCopies)||1;
+  var txt = 'Key: '+k.UnitNumber+' - '+k.KeyDescription+'\nCategory: '+(k.Category||'-')+'\nLocation: '+(k.StorageLocation||'-')+'\nAvailable: '+avail+'/'+total+'\nNotes: '+(k.Notes||'-');
+  navigator.clipboard.writeText(txt).then(function(){ toast('Copied to clipboard!','s'); }).catch(function(){ toast('Copy failed.','e'); });
+}
+
+// ── TRANSACTION DETAIL MODAL ──────────────────────────────────
+var _txDetailLog = null;
+
+function oTxDetail(id) {
+  if (!id) return;
+  var l = logs.find(function(x){ return x.id===id; }); if (!l) return;
+  _txDetailLog = l;
+
+  var dur = '';
+  if (l.DateIssued) {
+    var end = l.DateReturned ? new Date(l.DateReturned) : new Date();
+    var ms = end - new Date(l.DateIssued);
+    var h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+    dur = h+'h '+m+'m' + (l.Status!=='RETURNED' ? ' (ongoing)' : '');
+  }
+
+  var sev = odSev(l, new Date());
+  var statusHtml = l.Status==='ASSIGNED' ? '<span class="sp asgn">Assigned</span>'
+    : l.Status==='LOST'     ? '<span class="sp lost">Lost</span>'
+    : l.Status==='RETURNED' ? '<span class="sp ret">Returned</span>'
+    : sev>=2 ? '<span style="'+odStyle(sev)+'display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">'+odLbl(sev)+'</span>'
+    : '<span class="sp out">Out</span>';
+
+  var html = '<div style="padding:4px 0;">'
+    + drow('Unit / Key', '<strong>'+esc(l.UnitNumber||'')+'</strong> - '+esc(l.KeyDescription||''))
+    + drow('Category', esc(l.Category||'-'))
+    + (l.KeyTag ? drow('Key Tag', '<span style="font-weight:700;color:var(--maroon);">'+esc(l.KeyTag)+'</span>') : '')
+    + (l.CopyNumber ? drow('Copy Number', 'Copy '+l.CopyNumber) : '')
+    + drow('Status', statusHtml)
+    + drow('Issued To', '<strong>'+esc(l.IssuedTo||'')+'</strong>')
+    + drow('Issued By', esc(l.IssuedBy||'-'))
+    + drow('Purpose', esc(l.Purpose||'-'))
+    + drow('Remarks', esc(l.Remarks||'-'))
+    + drow('Date Issued', fmtD(l.DateIssued))
+    + drow('Expected Return', l.ExpectedReturn ? fmtD(l.ExpectedReturn) : (l.Status==='ASSIGNED' ? 'Permanent' : '-'))
+    + drow('Duration', dur||'-')
+    + drow('Storage Location', esc(l.StorageLocation||'-'))
+    + (l.DateReturned ? drow('Date Returned', fmtD(l.DateReturned)) : '')
+    + (l.ReturnedBy ? drow('Returned By', esc(l.ReturnedBy)) : '')
+    + (l.Condition ? drow('Key Condition', esc(l.Condition)) : '')
+    + (l.ReturnRemarks ? drow('Return Remarks', esc(l.ReturnRemarks)) : '')
+    + (l.LostReason ? drow('Lost Reason', esc(l.LostReason)) : '')
+    + (l.ReportedBy ? drow('Reported By', esc(l.ReportedBy)) : '')
+    + '</div>';
+
+  g('TDB').innerHTML = html;
+  var showSlip = l.Status==='OUT'||l.Status==='ASSIGNED'||l.Status==='RETURNED';
+  g('TDP').style.display = showSlip ? '' : 'none';
+  oModal('TDM');
+}
+
+function pSlipFromDetail() {
+  if (_txDetailLog) { cModal('TDM'); showPrintPreview(_txDetailLog); }
+}
+
+// ── PRINT PREVIEW ─────────────────────────────────────────────
+function showPrintPreview(l) {
+  if (!l) { toast('No data to preview.','e'); return; }
+  var title = l.Status==='ASSIGNED' ? 'KEY ASSIGNMENT SLIP' : 'KEY ISSUANCE SLIP';
+  var inner = '<div style="font-family:Arial,sans-serif;font-size:12px;padding:4px;">'
+    + '<div style="text-align:center;margin-bottom:12px;">'
+    + '<div style="font-size:18px;font-weight:700;color:#7B1C1C;">BIGBEN GROUP</div>'
+    + '<div style="font-size:11px;color:#5C5454;">EMR - BB Motorpool &bull; Dampol 1st, Pulilan, Bulacan</div>'
+    + '<div style="margin-top:6px;font-size:13px;font-weight:700;letter-spacing:1px;border-top:2px solid #7B1C1C;border-bottom:2px solid #7B1C1C;padding:4px 0;">'+title+'</div>'
+    + '</div>'
+    + '<table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:12px;">'
+    + ppRow('Unit / Key', esc(l.UnitNumber||'')+' - '+esc(l.KeyDescription||''), true)
+    + ppRow('Category', esc(l.Category||'-'), false)
+    + (l.KeyTag ? ppRow('Key Tag', esc(l.KeyTag), true) : '')
+    + ppRow('Issued To', esc(l.IssuedTo||''), true)
+    + ppRow('Purpose', esc(l.Purpose||'-'), false)
+    + ppRow('Date Issued', fmtD(l.DateIssued), true)
+    + ppRow('Expected Return', l.Status==='ASSIGNED'?'Permanent':(l.ExpectedReturn?fmtD(l.ExpectedReturn):'-'), false)
+    + ppRow('Storage Location', esc(l.StorageLocation||'-'), true)
+    + ppRow('Issued By', esc(l.IssuedBy||'-'), false)
+    + ppRow('Remarks', esc(l.Remarks||'-'), true)
+    + '</table>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px;">'
+    + '<div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:6px;font-size:10px;color:#5C5454;">Borrower&#39;s Signature over Printed Name</div></div>'
+    + '<div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:6px;font-size:10px;color:#5C5454;">Issued By / Guard on Duty</div></div>'
+    + '</div></div>';
+
+  g('PPC').innerHTML = inner;
+  _printData = l;
+  oModal('PPM');
+}
+
+function ppRow(label, val, shade) {
+  return '<tr'+(shade?' style="background:#F8EFEF;"':'')+'>'
+    +'<td style="padding:4px;color:#5C5454;width:35%;font-weight:600;">'+label+':</td>'
+    +'<td style="padding:4px;font-weight:600;">'+val+'</td></tr>';
+}
+
+var _printData = null;
+function doPrint() {
+  if (_printData) { cModal('PPM'); pSlip(_printData); }
+}
+
+// ── HIGHLIGHT SEARCH TERM ─────────────────────────────────────
+function hlText(text, q) {
+  if (!q || !text) return esc(text||'');
+  var escaped = esc(text);
+  var eQ = q.replace(/[-.*+?^${}()|[\]\\]/g, '\\$&');
+  return escaped.replace(new RegExp('('+eQ+')', 'gi'), '<span class="hl">$1</span>');
+}
+
+// ── START TIMERS ON LOAD ──────────────────────────────────────
+// Clock and timer started in main DOMContentLoaded above
+
+</script>
+</body>
+</html>
